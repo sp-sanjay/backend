@@ -7,6 +7,7 @@ import {
   refreshAccessToken,
   registerUser,
   updateAvatar,
+  updateCoverImage,
   updateUserProfile,
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
@@ -27,5 +28,6 @@ router.route("/change-password").post(verifyUser,changeCurrentPassword);
 router.route("/current-user").get(verifyUser,getCurrentUser);
 router.route("/update-profile").patch(verifyUser,updateUserProfile);
 router.route("/update-avatar").patch(upload.single('file'),verifyUser,updateAvatar);
+router.route("/update-cover-image").patch(upload.single('file'),verifyUser,updateCoverImage);
 
 export default router;
