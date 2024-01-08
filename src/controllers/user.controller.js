@@ -1,7 +1,10 @@
 import asyncHandler from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import {
+  destroyFromCloudinary,
+  uploadOnCloudinary,
+} from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 const generateRefreshAndAccessTokens = async (userId) => {
@@ -39,24 +42,32 @@ const registerUser = asyncHandler(async (req, res) => {
   if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar is required");
   }
-  let coverImageLocalPath;
+  const cloudinaryAvatar = await uploadOnCloudinary(avatarLocalPath);
+  let cloudinaryCoverImage;
   if (
     req.files &&
     Array.isArray(req.files.coverImage) &&
     req.files.coverImage.length > 0
   ) {
-    coverImageLocalPath = await req.files.coverImage[0]?.path;
+    const coverImageLocalPath = await req.files.coverImage[0]?.path;
+    cloudinaryCoverImage = await uploadOnCloudinary(coverImageLocalPath);
   }
-  const avatar = await uploadOnCloudinary(avatarLocalPath);
-  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
+  const avatar = {
+    url: cloudinaryAvatar.url,
+    publicId: cloudinaryAvatar.public_id,
+  };
+  const coverImage = {
+    url: cloudinaryCoverImage?.url || "",
+    publicId: cloudinaryCoverImage?.public_id || "",
+  };
   const user = await User.create({
     username: username.toLowerCase(),
     email,
     password,
     fullName,
-    avatar: avatar?.url,
-    coverImage: coverImage?.url || "",
+    avatar,
+    coverImage,
   });
 
   const createdUser = await User.findById(user._id).select(
@@ -238,14 +249,19 @@ const updateAvatar = asyncHandler(async (req, res) => {
     req.user._id,
     {
       $set: {
-        avatar: avatar.url,
+        avatar: {
+          url: avatar.url,
+          publicId: avatar.public_id,
+        },
       },
     },
     {
       new: true,
     }
   ).select("-password -refreshToken");
-
+  if (req.user?.avatar?.publicId) {
+    await destroyFromCloudinary(req.user.avatar.publicId);
+  }
   return res
     .status(200)
     .json(new ApiResponse(200, user, "Avatar updated successfully"));
@@ -262,14 +278,19 @@ const updateCoverImage = asyncHandler(async (req, res) => {
     req.user._id,
     {
       $set: {
-        coverImage: coverImage.url,
+        coverImage: {
+          url: coverImage.url,
+          publicId: coverImage.public_id,
+        },
       },
     },
     {
       new: true,
     }
   ).select("-password -refreshToken");
-
+  if (req.user?.coverImage?.publicId) {
+    await destroyFromCloudinary(req.user.coverImage.publicId);
+  }
   return res
     .status(200)
     .json(new ApiResponse(200, user, "coverImage updated successfully"));
@@ -284,5 +305,5 @@ export {
   getCurrentUser,
   updateUserProfile,
   updateAvatar,
-  updateCoverImage
+  updateCoverImage,
 };
