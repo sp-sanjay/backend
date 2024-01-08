@@ -7,6 +7,7 @@ import {
 } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import { COOKIE_OPTIONS } from "../constants/config.constant.js";
 const generateRefreshAndAccessTokens = async (userId) => {
   try {
     const user = await User.findById(userId);
@@ -70,16 +71,20 @@ const registerUser = asyncHandler(async (req, res) => {
     coverImage,
   });
 
+  const { accessToken, refreshToken } = await generateRefreshAndAccessTokens(
+    user._id
+  );
   const createdUser = await User.findById(user._id).select(
     "-password -refreshToken"
   ); //select method for removing fields from the response
   if (!createdUser) {
     throw new ApiError(500, "Something Went Wrong While Creating User");
   }
-
   return res
     .status(201)
-    .json(new ApiResponse(200, createdUser, "User registered successfully!!"));
+    .cookie("accessToken", accessToken, COOKIE_OPTIONS)
+    .cookie("refreshToken", refreshToken, COOKIE_OPTIONS)
+    .json(new ApiResponse(200, {user: createdUser, accessToken}, "User registered successfully!!"));
 });
 
 const loginUser = asyncHandler(async (req, res) => {
@@ -109,14 +114,10 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Something went wrong while logging");
   }
 
-  const options = {
-    httpOnly: true,
-    secure: true,
-  };
   return res
     .status(200)
-    .cookie("accessToken", accessToken, options)
-    .cookie("refreshToken", refreshToken, options)
+    .cookie("accessToken", accessToken, COOKIE_OPTIONS)
+    .cookie("refreshToken", refreshToken, COOKIE_OPTIONS)
     .json(
       new ApiResponse(
         200,
@@ -138,15 +139,11 @@ const logout = asyncHandler(async (req, res) => {
       new: true,
     }
   );
-  const options = {
-    httpOnly: true,
-    secure: true,
-  };
 
   res
     .status(200)
-    .clearCookie("accessToken", options)
-    .clearCookie("refreshToken", options)
+    .clearCookie("accessToken",  COOKIE_OPTIONS)
+    .clearCookie("refreshToken", COOKIE_OPTIONS)
     .json(new ApiResponse(200, {}, "User Logged out"));
 });
 
