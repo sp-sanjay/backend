@@ -84,7 +84,13 @@ const registerUser = asyncHandler(async (req, res) => {
     .status(201)
     .cookie("accessToken", accessToken, COOKIE_OPTIONS)
     .cookie("refreshToken", refreshToken, COOKIE_OPTIONS)
-    .json(new ApiResponse(200, {user: createdUser, accessToken}, "User registered successfully!!"));
+    .json(
+      new ApiResponse(
+        200,
+        { user: createdUser, accessToken },
+        "User registered successfully!!"
+      )
+    );
 });
 
 const loginUser = asyncHandler(async (req, res) => {
@@ -142,7 +148,7 @@ const logout = asyncHandler(async (req, res) => {
 
   res
     .status(200)
-    .clearCookie("accessToken",  COOKIE_OPTIONS)
+    .clearCookie("accessToken", COOKIE_OPTIONS)
     .clearCookie("refreshToken", COOKIE_OPTIONS)
     .json(new ApiResponse(200, {}, "User Logged out"));
 });
@@ -293,6 +299,73 @@ const updateCoverImage = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "coverImage updated successfully"));
 });
 
+const getUserProfileChannelAndSubscriber = asyncHandler(async (req, res) => {
+  try {
+    const { username } = req.params;
+    if (!username?.trim()) {
+      throw new ApiError(400, "username is required");
+    }
+    
+    const channel = await User.aggregate([
+      {
+        $match: {
+          username: username?.toLowerCase(),
+        },
+      },
+      {
+        $lookup: {
+          from: "subscriptions",
+          localField: "_id",
+          foreignField: "channel",
+          as: "subscribers",
+        },
+      },
+      {
+        $lookup: {
+          from: "subscriptions",
+          localField: "_id",
+          foreignField: "subscriber",
+          as: "subscribedTo",
+        },
+      },
+      {
+        $addFields: {
+          subscribersCount: {
+            $size: "$subscribers",
+          },
+          channelsSubscribedToCount: {
+            $size: "$subscribedTo",
+          },
+          isSubscribed: {
+            $eq: [{ $in: [req.user?._id, "$subscribers.subscriber"] }, true],
+          },
+        },
+      },
+      {
+        $project: {
+          username: 1,
+          fullName: 1,
+          email: 1,
+          subscribersCount: 1,
+          channelsSubscribedToCount: 1,
+          avatar: 1,
+          coverImage: 1,
+          isSubscribed: 1, // Add this line to project the new field
+        },
+      },
+    ]);
+    
+    if(!channel?.length) {
+      throw new ApiError(404, "username doesn't exist")
+    }
+
+    return res.status(200)
+    .json(new ApiResponse(200, channel[0], "channelData fetch successfully"))
+  } catch (error) {
+    throw new ApiError(400, error.message, error);
+  }
+});
+
 export {
   registerUser,
   loginUser,
@@ -303,4 +376,5 @@ export {
   updateUserProfile,
   updateAvatar,
   updateCoverImage,
+  getUserProfileChannelAndSubscriber,
 };

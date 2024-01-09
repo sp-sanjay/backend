@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   changeCurrentPassword,
   getCurrentUser,
+  getUserProfileChannelAndSubscriber,
   loginUser,
   logout,
   refreshAccessToken,
@@ -29,5 +30,6 @@ router.route("/current-user").get(verifyUser,getCurrentUser);
 router.route("/update-profile").patch(verifyUser,updateUserProfile);
 router.route("/update-avatar").patch(upload.single('file'),verifyUser,updateAvatar);
 router.route("/update-cover-image").patch(upload.single('file'),verifyUser,updateCoverImage);
+router.route("/user-profile-subscriber/:username").get(verifyUser,getUserProfileChannelAndSubscriber);
 
 export default router;
