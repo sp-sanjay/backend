@@ -1,10 +1,12 @@
 import dotenv from 'dotenv';
 import connectDB from './db/index.js';
 import app from './app.js'
+import { handleApiError } from './middlewares/errorHandling.middleware.js';
 dotenv.config({
     path: './env'
 })
 
+app.use(handleApiError)
 
 connectDB().then(()=>{
     const port = process.env.PORT || 8000;
