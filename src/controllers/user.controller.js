@@ -29,7 +29,9 @@ const generateRefreshAndAccessTokens = async (userId) => {
 const registerUser = asyncHandler(async (req, res) => {
   const { username, email, password, fullName } = req.body;
   if (
-    [fullName, username, email, password].some((field) => field.trim() === "")
+    [fullName, username, email, password].some(
+      (field) => field && field?.trim() === ""
+    )
   ) {
     throw new ApiError(400, "All Fields are required");
   }
@@ -39,7 +41,8 @@ const registerUser = asyncHandler(async (req, res) => {
   if (existedUser) {
     throw new ApiError(409, "User with email or username already exists");
   }
-  const avatarLocalPath = await req.files.avatar[0]?.path;
+  const avatarLocalPath =
+    req.files && req.files?.avatar?.length > 0 && req.files?.avatar[0]?.path;
   if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar is required");
   }
@@ -80,17 +83,19 @@ const registerUser = asyncHandler(async (req, res) => {
   if (!createdUser) {
     throw new ApiError(500, "Something Went Wrong While Creating User");
   }
-  return res
-    .status(201)
-    .cookie("accessToken", accessToken, COOKIE_OPTIONS)
-    .cookie("refreshToken", refreshToken, COOKIE_OPTIONS)
-    .json(
-      new ApiResponse(
-        200,
-        { user: createdUser, accessToken },
-        "User registered successfully!!"
-      )
-    );
+
+  const cookies = {
+    accessToken,
+    refreshToken,
+  };
+
+  ApiResponse(
+    res,
+    { user: createdUser, accessToken },
+    "User registered successfully!!",
+    201,
+    cookies
+  );
 });
 
 const loginUser = asyncHandler(async (req, res) => {
@@ -120,17 +125,17 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Something went wrong while logging");
   }
 
-  return res
-    .status(200)
-    .cookie("accessToken", accessToken, COOKIE_OPTIONS)
-    .cookie("refreshToken", refreshToken, COOKIE_OPTIONS)
-    .json(
-      new ApiResponse(
-        200,
-        { user: loggedInUser, accessToken },
-        "User logged in successfully!!"
-      )
-    );
+  const cookies = {
+    accessToken,
+    refreshToken,
+  };
+  ApiResponse(
+    res,
+    { user: loggedInUser, accessToken },
+    "User logged in successfully!!",
+    200,
+    cookies
+  );
 });
 
 const logout = asyncHandler(async (req, res) => {
@@ -150,7 +155,14 @@ const logout = asyncHandler(async (req, res) => {
     .status(200)
     .clearCookie("accessToken", COOKIE_OPTIONS)
     .clearCookie("refreshToken", COOKIE_OPTIONS)
-    .json(new ApiResponse(200, {}, "User Logged out"));
+    .json({
+      statusCode: 200,
+      data: {},
+      message: "User Logged out",
+      success: true,
+    });
+
+  // ApiResponse(res, { user: loggedInUser, accessToken }, "User logged in successfully!!", 200, cookies)
 });
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
@@ -173,24 +185,15 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       throw new ApiError(401, "Invalid RefreshToken");
     }
 
-    const { accessToken, refreshToken } = generateRefreshAndAccessTokens(
+    const { accessToken, refreshToken } = await generateRefreshAndAccessTokens(
       user._id
     );
 
-    res
-      .status(200)
-      .cookie("accessToken", accessToken)
-      .cookie("refreshToken", refreshToken)
-      .json(
-        new ApiResponse(
-          200,
-          {
-            accessToken,
-            refreshToken,
-          },
-          "AccessToken refreshed"
-        )
-      );
+    const cookies = {
+      accessToken,
+      refreshToken,
+    };
+    ApiResponse(res, cookies, "AccessToken refreshed", 200, cookies);
   } catch (error) {
     throw new ApiError(401, "Invalid RefreshToken");
   }
@@ -211,13 +214,11 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
   }
   user.password = newPassword;
   await user.save({ validateBeforeSave: false });
-  res
-    .status(200)
-    .json(new ApiResponse(200, {}, "Password change successfully"));
+  ApiResponse(res, {}, "Password change successfully");
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
-  return res.status(200).json(new ApiResponse(200, req.user));
+  ApiResponse(res, req.user);
 });
 
 const updateUserProfile = asyncHandler(async (req, res) => {
@@ -236,9 +237,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
     },
     { new: true }
   ).select("-password -refreshToken");
-  return res
-    .status(200)
-    .json(new ApiResponse(200, user, "User Profile updated successfully"));
+  ApiResponse(res, user, "User Profile updated successfully");
 });
 
 const updateAvatar = asyncHandler(async (req, res) => {
@@ -265,9 +264,7 @@ const updateAvatar = asyncHandler(async (req, res) => {
   if (req.user?.avatar?.publicId) {
     await destroyFromCloudinary(req.user.avatar.publicId);
   }
-  return res
-    .status(200)
-    .json(new ApiResponse(200, user, "Avatar updated successfully"));
+  ApiResponse(res, user, "Avatar updated successfully");
 });
 
 const updateCoverImage = asyncHandler(async (req, res) => {
@@ -294,9 +291,7 @@ const updateCoverImage = asyncHandler(async (req, res) => {
   if (req.user?.coverImage?.publicId) {
     await destroyFromCloudinary(req.user.coverImage.publicId);
   }
-  return res
-    .status(200)
-    .json(new ApiResponse(200, user, "coverImage updated successfully"));
+  ApiResponse(res, user, "coverImage updated successfully");
 });
 
 const getUserProfileChannelAndSubscriber = asyncHandler(async (req, res) => {
@@ -305,7 +300,7 @@ const getUserProfileChannelAndSubscriber = asyncHandler(async (req, res) => {
     if (!username?.trim()) {
       throw new ApiError(400, "username is required");
     }
-    
+
     const channel = await User.aggregate([
       {
         $match: {
@@ -354,13 +349,12 @@ const getUserProfileChannelAndSubscriber = asyncHandler(async (req, res) => {
         },
       },
     ]);
-    
-    if(!channel?.length) {
-      throw new ApiError(404, "username doesn't exist")
+
+    if (!channel?.length) {
+      throw new ApiError(404, "username doesn't exist");
     }
 
-    return res.status(200)
-    .json(new ApiResponse(200, channel[0], "channelData fetch successfully"))
+    ApiResponse(res, channel[0], "channelData fetch successfully");
   } catch (error) {
     throw new ApiError(error.statusCode, error.message, error);
   }
