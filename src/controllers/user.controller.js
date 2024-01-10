@@ -350,7 +350,7 @@ const getUserProfileChannelAndSubscriber = asyncHandler(async (req, res) => {
           channelsSubscribedToCount: 1,
           avatar: 1,
           coverImage: 1,
-          isSubscribed: 1, // Add this line to project the new field
+          isSubscribed: 1,
         },
       },
     ]);
@@ -362,7 +362,7 @@ const getUserProfileChannelAndSubscriber = asyncHandler(async (req, res) => {
     return res.status(200)
     .json(new ApiResponse(200, channel[0], "channelData fetch successfully"))
   } catch (error) {
-    throw new ApiError(400, error.message, error);
+    throw new ApiError(error.statusCode, error.message, error);
   }
 });
 
