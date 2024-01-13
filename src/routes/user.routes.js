@@ -3,6 +3,7 @@ import {
   changeCurrentPassword,
   getCurrentUser,
   getUserProfileChannelAndSubscriber,
+  getWatchHistory,
   loginUser,
   logout,
   refreshAccessToken,
@@ -31,5 +32,6 @@ router.route("/update-profile").patch(verifyUser,updateUserProfile);
 router.route("/update-avatar").patch(upload.single('file'),verifyUser,updateAvatar);
 router.route("/update-cover-image").patch(upload.single('file'),verifyUser,updateCoverImage);
 router.route("/user-profile-subscriber/:username").get(verifyUser,getUserProfileChannelAndSubscriber);
+router.route("/history").get(verifyUser, getWatchHistory)
 
 export default router;

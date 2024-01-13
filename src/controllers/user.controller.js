@@ -8,6 +8,8 @@ import {
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import { COOKIE_OPTIONS } from "../constants/config.constant.js";
+import mongoose from "mongoose";
+import { DEFAULT_LIMIT, DEFAULT_SKIP } from "../constants.js";
 const generateRefreshAndAccessTokens = async (userId) => {
   try {
     const user = await User.findById(userId);
@@ -161,8 +163,6 @@ const logout = asyncHandler(async (req, res) => {
       message: "User Logged out",
       success: true,
     });
-
-  // ApiResponse(res, { user: loggedInUser, accessToken }, "User logged in successfully!!", 200, cookies)
 });
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
@@ -360,6 +360,80 @@ const getUserProfileChannelAndSubscriber = asyncHandler(async (req, res) => {
   }
 });
 
+const getWatchHistory = asyncHandler(async (req, res) => {
+  let { skip, limit } = req.params;
+  skip = skip ?? DEFAULT_SKIP;
+  limit = limit ?? DEFAULT_LIMIT;
+
+  try {
+    const user = await User.aggregate([
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(req.user._id),
+        },
+      },
+      {
+        $lookup: {
+          from: "videos",
+          localField: "watchHistory",
+          foreignField: "_id",
+          as: "watchHistory",
+          pipeline: [
+            {
+              $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner",
+                pipeline: [
+                  {
+                    $project: {
+                      username: 1,
+                      fullName: 1,
+                      avatar: 1,
+                    },
+                  },
+                ],
+              },
+            },
+            {
+              $addFields: {
+                owner: {
+                  $first: "$owner",
+                },
+              },
+            },
+          ],
+        },
+      },
+      {
+        $facet: {
+          data: [
+            {
+              $skip: skip,
+            },
+            {
+              $limit: limit,
+            },
+          ],
+          count: [
+            {
+              $count: "count",
+            },
+          ],
+        },
+      },
+    ]);
+    const { data, count } = user.length > 0 ? user[0] : { data: [], count: 0 };
+    ApiResponse(res, data);
+  } catch (error) {
+    throw new ApiError(
+      error.statusCode || 500,
+      error.message || "Something Went Wrong"
+    );
+  }
+});
+
 export {
   registerUser,
   loginUser,
@@ -371,4 +445,5 @@ export {
   updateAvatar,
   updateCoverImage,
   getUserProfileChannelAndSubscriber,
+  getWatchHistory,
 };
