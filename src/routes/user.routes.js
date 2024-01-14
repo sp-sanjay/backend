@@ -15,7 +15,7 @@ import {
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyUser } from "../middlewares/auth.middleware.js";
 import { validateRequest } from "../middlewares/validateRequest.middleware.js";
-import { signupSchema } from "../schemas/user.schema.js";
+import { loginSchema, signupSchema } from "../schemas/user.schema.js";
 const router = Router();
 
 router.route("/register").post(
@@ -26,7 +26,7 @@ router.route("/register").post(
   validateRequest(signupSchema),
   registerUser
 );
-router.route("/login").post(loginUser);
+router.route("/login").post(validateRequest(loginSchema),loginUser);
 router.route("/logout").post(verifyUser, logout);
 router.route("/refresh-token").post(refreshAccessToken);
 router.route("/change-password").post(verifyUser,changeCurrentPassword);
