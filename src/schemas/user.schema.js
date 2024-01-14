@@ -28,9 +28,13 @@ const updateUserProfileSchema = Joi.object({
   fullName: Joi.string().required(),
 });
 
+const profilePictureSchema = Joi.object({
+    file: Joi.object().required()
+})
 export {
   signupSchema,
   loginSchema,
   changeCurrentPasswordSchema,
   updateUserProfileSchema,
+  profilePictureSchema
 };

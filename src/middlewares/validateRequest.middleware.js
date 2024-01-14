@@ -12,7 +12,7 @@ export const validateRequest = (schema) => {
     if (req.file) {
       requestData = {
         ...requestData,
-        ...req.file,
+        [req.file.fieldname] :req.file,
       };
     }
     schema
