@@ -15,7 +15,7 @@ import {
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyUser } from "../middlewares/auth.middleware.js";
 import { validateRequest } from "../middlewares/validateRequest.middleware.js";
-import { loginSchema, signupSchema } from "../schemas/user.schema.js";
+import { changeCurrentPasswordSchema, loginSchema, signupSchema } from "../schemas/user.schema.js";
 const router = Router();
 
 router.route("/register").post(
@@ -29,7 +29,7 @@ router.route("/register").post(
 router.route("/login").post(validateRequest(loginSchema),loginUser);
 router.route("/logout").post(verifyUser, logout);
 router.route("/refresh-token").post(refreshAccessToken);
-router.route("/change-password").post(verifyUser,changeCurrentPassword);
+router.route("/change-password").post(validateRequest(changeCurrentPasswordSchema) ,verifyUser,changeCurrentPassword);
 router.route("/current-user").get(verifyUser,getCurrentUser);
 router.route("/update-profile").patch(verifyUser,updateUserProfile);
 router.route("/update-avatar").patch(upload.single('file'),verifyUser,updateAvatar);
