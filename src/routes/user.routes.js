@@ -15,7 +15,7 @@ import {
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyUser } from "../middlewares/auth.middleware.js";
 import { validateRequest } from "../middlewares/validateRequest.middleware.js";
-import { changeCurrentPasswordSchema, loginSchema, signupSchema } from "../schemas/user.schema.js";
+import { changeCurrentPasswordSchema, loginSchema, signupSchema, updateUserProfileSchema } from "../schemas/user.schema.js";
 const router = Router();
 
 router.route("/register").post(
@@ -31,7 +31,7 @@ router.route("/logout").post(verifyUser, logout);
 router.route("/refresh-token").post(refreshAccessToken);
 router.route("/change-password").post(validateRequest(changeCurrentPasswordSchema) ,verifyUser,changeCurrentPassword);
 router.route("/current-user").get(verifyUser,getCurrentUser);
-router.route("/update-profile").patch(verifyUser,updateUserProfile);
+router.route("/update-profile").patch(validateRequest(updateUserProfileSchema),verifyUser,updateUserProfile);
 router.route("/update-avatar").patch(upload.single('file'),verifyUser,updateAvatar);
 router.route("/update-cover-image").patch(upload.single('file'),verifyUser,updateCoverImage);
 router.route("/user-profile-subscriber/:username").get(verifyUser,getUserProfileChannelAndSubscriber);
