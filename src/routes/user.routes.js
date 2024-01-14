@@ -14,6 +14,8 @@ import {
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyUser } from "../middlewares/auth.middleware.js";
+import { validateRequest } from "../middlewares/validateRequest.middleware.js";
+import { signupSchema } from "../schemas/user.schema.js";
 const router = Router();
 
 router.route("/register").post(
@@ -21,6 +23,7 @@ router.route("/register").post(
     { name: "avatar", maxCount: 1 },
     { name: "coverImage", maxCount: 1 },
   ]),
+  validateRequest(signupSchema),
   registerUser
 );
 router.route("/login").post(loginUser);
